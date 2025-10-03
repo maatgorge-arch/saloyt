@@ -1,13 +1,22 @@
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
-import isodate  # To parse YouTube ISO8601 durations
+import re  # instead of isodate
 
 # YouTube API Key
 API_KEY = "AIzaSyCSU8V7jLlGXUWN4v9LuLkbqpC6GT2R1TA"
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 YOUTUBE_VIDEO_URL = "https://www.googleapis.com/youtube/v3/videos"
 YOUTUBE_CHANNEL_URL = "https://www.googleapis.com/youtube/v3/channels"
+
+# Duration parser (to replace isodate)
+def parse_duration(duration):
+    # YouTube gives duration like PT1H20M33S
+    match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration)
+    if not match:
+        return 0
+    hours, minutes, seconds = match.groups(default="0")
+    return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
 
 # Streamlit App Title
 st.title("YouTube Viral Topics Tool")
@@ -17,7 +26,11 @@ days = st.number_input("Enter Days to Search (1-30):", min_value=1, max_value=30
 
 # List of broader keywords
 keywords = [
-   "Life Million Years Ago","King Kong","Beauty","Prehistoric Girl","Survival","Primitive Girl","Albino Gorilla","Spider-Man","Hulk","Joker","Supergirl","Thor","She-Hulk","Dinosaur","Megalodon","Jungle Survival","Wild Survival","Ancient Humans","Early Humans","Human Evolution","Marvel AI","Venom","Wonder Woman","Catwoman","Black Widow","Superhero Battle","Monster Battle","Prehistoric Love Story","Gorilla and Girl","Jurassic World","KPOP Demon Hunters"
+   "Life Million Years Ago","King Kong","Beauty","Prehistoric Girl","Survival","Primitive Girl",
+   "Albino Gorilla","Spider-Man","Hulk","Joker","Supergirl","Thor","She-Hulk","Dinosaur",
+   "Megalodon","Jungle Survival","Wild Survival","Ancient Humans","Early Humans","Human Evolution",
+   "Marvel AI","Venom","Wonder Woman","Catwoman","Black Widow","Superhero Battle","Monster Battle",
+   "Prehistoric Love Story","Gorilla and Girl","Jurassic World","KPOP Demon Hunters"
 ]
 
 # Fetch Data Button
@@ -86,7 +99,6 @@ if st.button("Fetch Data"):
             # Collect results with duration filter
             for video, stat, channel in zip(videos, stats, channels):
                 try:
-                    # Extract details
                     title = video["snippet"].get("title", "N/A")
                     description = video["snippet"].get("description", "")[:200]
                     video_url = f"https://www.youtube.com/watch?v={video['id']['videoId']}"
@@ -95,7 +107,7 @@ if st.button("Fetch Data"):
 
                     # Duration filter
                     duration_iso = stat["contentDetails"].get("duration", "PT0M0S")
-                    duration_seconds = isodate.parse_duration(duration_iso).total_seconds()
+                    duration_seconds = parse_duration(duration_iso)
 
                     if subs < 3000 and duration_seconds >= 1200:  # 20 min = 1200 sec
                         all_results.append({
@@ -127,5 +139,3 @@ if st.button("Fetch Data"):
 
     except Exception as e:
         st.error(f"An error occurred: {e}")
-
-
