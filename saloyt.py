@@ -1,7 +1,7 @@
-
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
+import isodate  # To parse YouTube ISO8601 durations
 
 # YouTube API Key
 API_KEY = "AIzaSyCSU8V7jLlGXUWN4v9LuLkbqpC6GT2R1TA"
@@ -17,13 +17,13 @@ days = st.number_input("Enter Days to Search (1-30):", min_value=1, max_value=30
 
 # List of broader keywords
 keywords = [
- "Affair Relationship Stories", "Reddit Update", "Reddit Relationship Advice", "Reddit Relationship", 
-"Reddit Cheating", "AITA Update", "Open Marriage", "Open Relationship", "X BF Caught", 
-"Stories Cheat", "X GF Reddit", "AskReddit Surviving Infidelity", "GurlCan Reddit", 
-"Cheating Story Actually Happened", "Cheating Story Real", "True Cheating Story", 
-"Reddit Cheating Story", "R/Surviving Infidelity", "Surviving Infidelity", 
-"Reddit Marriage", "Wife Cheated I Can't Forgive", "Reddit AP", "Exposed Wife", 
-"Cheat Exposed"
+    "Affair Relationship Stories", "Reddit Update", "Reddit Relationship Advice", "Reddit Relationship", 
+    "Reddit Cheating", "AITA Update", "Open Marriage", "Open Relationship", "X BF Caught", 
+    "Stories Cheat", "X GF Reddit", "AskReddit Surviving Infidelity", "GurlCan Reddit", 
+    "Cheating Story Actually Happened", "Cheating Story Real", "True Cheating Story", 
+    "Reddit Cheating Story", "R/Surviving Infidelity", "Surviving Infidelity", 
+    "Reddit Marriage", "Wife Cheated I Can't Forgive", "Reddit AP", "Exposed Wife", 
+    "Cheat Exposed"
 ]
 
 # Fetch Data Button
@@ -52,7 +52,6 @@ if st.button("Fetch Data"):
             response = requests.get(YOUTUBE_SEARCH_URL, params=search_params)
             data = response.json()
 
-            # Check if "items" key exists
             if "items" not in data or not data["items"]:
                 st.warning(f"No videos found for keyword: {keyword}")
                 continue
@@ -65,8 +64,12 @@ if st.button("Fetch Data"):
                 st.warning(f"Skipping keyword: {keyword} due to missing video/channel data.")
                 continue
 
-            # Fetch video statistics
-            stats_params = {"part": "statistics", "id": ",".join(video_ids), "key": API_KEY}
+            # Fetch video statistics + duration
+            stats_params = {
+                "part": "statistics,contentDetails",
+                "id": ",".join(video_ids),
+                "key": API_KEY
+            }
             stats_response = requests.get(YOUTUBE_VIDEO_URL, params=stats_params)
             stats_data = stats_response.json()
 
@@ -86,38 +89,49 @@ if st.button("Fetch Data"):
             stats = stats_data["items"]
             channels = channel_data["items"]
 
-            # Collect results
+            # Collect results with duration filter
             for video, stat, channel in zip(videos, stats, channels):
-                title = video["snippet"].get("title", "N/A")
-                description = video["snippet"].get("description", "")[:200]
-                video_url = f"https://www.youtube.com/watch?v={video['id']['videoId']}"
-                views = int(stat["statistics"].get("viewCount", 0))
-                subs = int(channel["statistics"].get("subscriberCount", 0))
+                try:
+                    # Extract details
+                    title = video["snippet"].get("title", "N/A")
+                    description = video["snippet"].get("description", "")[:200]
+                    video_url = f"https://www.youtube.com/watch?v={video['id']['videoId']}"
+                    views = int(stat["statistics"].get("viewCount", 0))
+                    subs = int(channel["statistics"].get("subscriberCount", 0))
 
-                if subs < 3000:  # Only include channels with fewer than 3,000 subscribers
-                    all_results.append({
-                        "Title": title,
-                        "Description": description,
-                        "URL": video_url,
-                        "Views": views,
-                        "Subscribers": subs
-                    })
+                    # Duration filter
+                    duration_iso = stat["contentDetails"].get("duration", "PT0M0S")
+                    duration_seconds = isodate.parse_duration(duration_iso).total_seconds()
+
+                    if subs < 3000 and duration_seconds >= 1200:  # 20 min = 1200 sec
+                        all_results.append({
+                            "Title": title,
+                            "Description": description,
+                            "URL": video_url,
+                            "Views": views,
+                            "Subscribers": subs,
+                            "Duration": str(timedelta(seconds=int(duration_seconds)))
+                        })
+                except Exception as e:
+                    st.warning(f"Error parsing video data: {e}")
 
         # Display results
         if all_results:
-            st.success(f"Found {len(all_results)} results across all keywords!")
+            st.success(f"Found {len(all_results)} results (20+ min videos, <3000 subs)!")
             for result in all_results:
                 st.markdown(
                     f"**Title:** {result['Title']}  \n"
                     f"**Description:** {result['Description']}  \n"
                     f"**URL:** [Watch Video]({result['URL']})  \n"
                     f"**Views:** {result['Views']}  \n"
-                    f"**Subscribers:** {result['Subscribers']}"
+                    f"**Subscribers:** {result['Subscribers']}  \n"
+                    f"**Duration:** {result['Duration']}"
                 )
                 st.write("---")
         else:
-            st.warning("No results found for channels with fewer than 3,000 subscribers.")
+            st.warning("No results found for channels with fewer than 3,000 subscribers and duration over 20 minutes.")
 
     except Exception as e:
         st.error(f"An error occurred: {e}")
+
 
