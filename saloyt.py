@@ -29,6 +29,12 @@ min_duration = st.number_input(
     min_value=1, max_value=300, value=20
 )
 
+# Runtime input for maximum channel subscribers
+max_subs = st.number_input(
+    "Enter Maximum Subscribers for Channel:", 
+    min_value=0, max_value=10000000, value=3000
+)
+
 # Runtime input for keywords
 keywords_input = st.text_area(
     "Enter Keywords (comma separated):",
@@ -115,11 +121,11 @@ if st.button("Fetch Data"):
                     channel_id = video["snippet"].get("channelId", "")
                     subs = channel_map.get(channel_id, 0)
 
-                    # Duration filter (runtime input in minutes)
+                    # Duration + subscriber filter
                     duration_iso = stat["contentDetails"].get("duration", "PT0M0S")
                     duration_seconds = parse_duration(duration_iso)
 
-                    if subs < 3000 and duration_seconds >= min_duration * 60:
+                    if subs <= max_subs and duration_seconds >= min_duration * 60:
                         all_results.append({
                             "Title": title,
                             "Description": description,
@@ -133,7 +139,7 @@ if st.button("Fetch Data"):
 
         # Display results
         if all_results:
-            st.success(f"✅ Found {len(all_results)} results (> {min_duration} min videos, < 3000 subs)!")
+            st.success(f"✅ Found {len(all_results)} results (> {min_duration} min videos, ≤ {max_subs} subs)!")
             for result in all_results:
                 st.markdown(
                     f"**Title:** {result['Title']}  \n"
@@ -145,7 +151,7 @@ if st.button("Fetch Data"):
                 )
                 st.write("---")
         else:
-            st.warning(f"No results found for channels with fewer than 3,000 subscribers and duration over {min_duration} minutes.")
+            st.warning(f"No results found for channels ≤ {max_subs} subscribers and duration over {min_duration} minutes.")
 
     except Exception as e:
         st.error(f"An error occurred: {e}")
