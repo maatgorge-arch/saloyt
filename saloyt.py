@@ -29,14 +29,12 @@ min_duration = st.number_input(
     min_value=1, max_value=300, value=20
 )
 
-# List of broader keywords
-keywords = [
-   "Life Million Years Ago","King Kong","Beauty","Prehistoric Girl","Survival","Primitive Girl",
-   "Albino Gorilla","Spider-Man","Hulk","Joker","Supergirl","Thor","She-Hulk","Dinosaur",
-   "Megalodon","Jungle Survival","Wild Survival","Ancient Humans","Early Humans","Human Evolution",
-   "Marvel AI","Venom","Wonder Woman","Catwoman","Black Widow","Superhero Battle","Monster Battle",
-   "Prehistoric Love Story","Gorilla and Girl","Jurassic World","KPOP Demon Hunters"
-]
+# Runtime input for keywords
+keywords_input = st.text_area(
+    "Enter Keywords (comma separated):",
+    "Life Million Years Ago, King Kong, Beauty"
+)
+keywords = [kw.strip() for kw in keywords_input.split(",") if kw.strip()]
 
 # Fetch Data Button
 if st.button("Fetch Data"):
@@ -45,9 +43,9 @@ if st.button("Fetch Data"):
         start_date = (datetime.utcnow() - timedelta(days=int(days))).isoformat("T") + "Z"
         all_results = []
 
-        # Iterate over the list of keywords
+        # Iterate over runtime keywords
         for keyword in keywords:
-            st.write(f"Searching for keyword: {keyword}")
+            st.write(f"🔍 Searching for keyword: {keyword}")
 
             # Define search parameters
             search_params = {
@@ -128,7 +126,7 @@ if st.button("Fetch Data"):
 
         # Display results
         if all_results:
-            st.success(f"Found {len(all_results)} results (>{min_duration} min videos, <3000 subs)!")
+            st.success(f"✅ Found {len(all_results)} results (> {min_duration} min videos, < 3000 subs)!")
             for result in all_results:
                 st.markdown(
                     f"**Title:** {result['Title']}  \n"
