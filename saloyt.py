@@ -87,8 +87,8 @@ if st.button("Fetch Data"):
                 st.warning(f"Failed to fetch video statistics for keyword: {keyword}")
                 continue
 
-            # Fetch channel statistics
-            channel_params = {"part": "statistics", "id": ",".join(channel_ids), "key": API_KEY}
+            # Fetch channel statistics (map by channelId)
+            channel_params = {"part": "statistics", "id": ",".join(set(channel_ids)), "key": API_KEY}
             channel_response = requests.get(YOUTUBE_CHANNEL_URL, params=channel_params)
             channel_data = channel_response.json()
 
@@ -96,17 +96,24 @@ if st.button("Fetch Data"):
                 st.warning(f"Failed to fetch channel statistics for keyword: {keyword}")
                 continue
 
-            stats = stats_data["items"]
-            channels = channel_data["items"]
+            # Build channelId → subs map
+            channel_map = {}
+            for ch in channel_data["items"]:
+                cid = ch["id"]
+                subs = int(ch["statistics"].get("subscriberCount", 0))
+                channel_map[cid] = subs
 
-            # Collect results with duration filter
-            for video, stat, channel in zip(videos, stats, channels):
+            stats = stats_data["items"]
+
+            # Collect results with duration + correct subscriber check
+            for video, stat in zip(videos, stats):
                 try:
                     title = video["snippet"].get("title", "N/A")
                     description = video["snippet"].get("description", "")[:200]
                     video_url = f"https://www.youtube.com/watch?v={video['id']['videoId']}"
                     views = int(stat["statistics"].get("viewCount", 0))
-                    subs = int(channel["statistics"].get("subscriberCount", 0))
+                    channel_id = video["snippet"].get("channelId", "")
+                    subs = channel_map.get(channel_id, 0)
 
                     # Duration filter (runtime input in minutes)
                     duration_iso = stat["contentDetails"].get("duration", "PT0M0S")
