@@ -178,4 +178,24 @@ if st.button("Find Similar Videos"):
     st.subheader("🎯 Similar Videos")
     for v in found:
         vid_id = v["id"]
-        vsn = v.get("snippet"
+        vsn = v.get("snippet", {})
+        vcd = v.get("contentDetails", {})
+        vst = v.get("statistics", {})
+
+        vt = vsn.get("title", "N/A")
+        vch = vsn.get("channelTitle", "Unknown")
+        vdesc = vsn.get("description", "")[:250]
+        vviews = vst.get("viewCount", "0")
+        vdur = format_duration(parse_duration(vcd.get("duration", "PT0S")))
+        vurl = f"https://www.youtube.com/watch?v={vid_id}"
+
+        st.markdown(
+            f"**{vt}**  \n"
+            f"Channel: {vch}  \n"
+            f"Duration: {vdur}  •  Views: {vviews}  \n"
+            f"URL: {vurl}  \n\n"
+            f"{vdesc}"
+        )
+        st.write("---")
+
+    st.success("Done — similar videos listed above.")
