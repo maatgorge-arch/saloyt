@@ -5,9 +5,9 @@ import re
 from collections import Counter
 
 # -----------------------------
-# Replace with your YouTube API Key
+# Your YouTube API Key
 # -----------------------------
-API_KEY = "AIzaSyCSU8V7jLlGXUWN4v9LuLkbqpC6GT2R1TA"   # <-- put your API key here
+API_KEY = "AIzaSyCSU8V7jLlGXUWN4v9LuLkbqpC6GT2R1TA"
 YOUTUBE_VIDEO_URL = "https://www.googleapis.com/youtube/v3/videos"
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 
@@ -45,7 +45,7 @@ def extract_video_id(input_str: str) -> str | None:
             return m.group(1)
     return None
 
-# small stopword list to filter common words when extracting keywords
+# small stopword list
 STOPWORDS = {
     "that","this","with","from","they","their","about","these","there","which",
     "would","could","should","because","around","video","watch","youtube","your",
@@ -124,13 +124,11 @@ if st.button("Find Similar Videos"):
         f"**Description (first 300 chars):**\n\n{description[:300]}..."
     )
 
-    # Build a better search query: use title + top keywords from description + tags
+    # Build query from title, description, tags
     keywords = [title]
     keywords += top_keywords_from_text(description, n=6)
     if tags:
-        # include top tags (they're usually short)
         keywords += tags[:6]
-    # join into a compact query. We keep it short to get relevant results.
     search_query = " ".join(dict.fromkeys(keywords))  # remove duplicates keeping order
     st.info(f"Searching using query: **{search_query[:200]}**")
 
@@ -152,13 +150,12 @@ if st.button("Find Similar Videos"):
         st.stop()
 
     items = search_data.get("items", [])
-    # gather candidate ids (exclude the original)
     candidate_ids = [it["id"]["videoId"] for it in items if it.get("id", {}).get("videoId") and it["id"]["videoId"] != video_id]
     if not candidate_ids:
         st.warning("No similar videos found via the search query.")
         st.stop()
 
-    # Fetch details (statistics + durations) for candidates
+    # Fetch details for candidates
     try:
         with st.spinner("Fetching details for found videos..."):
             vid_params = {
@@ -181,5 +178,4 @@ if st.button("Find Similar Videos"):
     st.subheader("🎯 Similar Videos")
     for v in found:
         vid_id = v["id"]
-        vsn = v.get("snippet", {})
-        vcd = v.get("contentDetail
+        vsn = v.get("snippet"
