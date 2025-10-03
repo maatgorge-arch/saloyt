@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
-import re  # instead of isodate
+import re  # custom duration parser
 
 # YouTube API Key
 API_KEY = "AIzaSyCSU8V7jLlGXUWN4v9LuLkbqpC6GT2R1TA"
@@ -9,9 +9,8 @@ YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
 YOUTUBE_VIDEO_URL = "https://www.googleapis.com/youtube/v3/videos"
 YOUTUBE_CHANNEL_URL = "https://www.googleapis.com/youtube/v3/channels"
 
-# Duration parser (to replace isodate)
+# Duration parser (replaces isodate for Streamlit.io compatibility)
 def parse_duration(duration):
-    # YouTube gives duration like PT1H20M33S
     match = re.match(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', duration)
     if not match:
         return 0
@@ -23,6 +22,12 @@ st.title("YouTube Viral Topics Tool")
 
 # Input Fields
 days = st.number_input("Enter Days to Search (1-30):", min_value=1, max_value=30, value=5)
+
+# Runtime input for minimum video duration
+min_duration = st.number_input(
+    "Enter Minimum Video Duration (minutes):", 
+    min_value=1, max_value=300, value=20
+)
 
 # List of broader keywords
 keywords = [
@@ -105,11 +110,11 @@ if st.button("Fetch Data"):
                     views = int(stat["statistics"].get("viewCount", 0))
                     subs = int(channel["statistics"].get("subscriberCount", 0))
 
-                    # Duration filter
+                    # Duration filter (runtime input in minutes)
                     duration_iso = stat["contentDetails"].get("duration", "PT0M0S")
                     duration_seconds = parse_duration(duration_iso)
 
-                    if subs < 3000 and duration_seconds >= 1200:  # 20 min = 1200 sec
+                    if subs < 3000 and duration_seconds >= min_duration * 60:
                         all_results.append({
                             "Title": title,
                             "Description": description,
@@ -123,7 +128,7 @@ if st.button("Fetch Data"):
 
         # Display results
         if all_results:
-            st.success(f"Found {len(all_results)} results (20+ min videos, <3000 subs)!")
+            st.success(f"Found {len(all_results)} results (>{min_duration} min videos, <3000 subs)!")
             for result in all_results:
                 st.markdown(
                     f"**Title:** {result['Title']}  \n"
@@ -135,7 +140,7 @@ if st.button("Fetch Data"):
                 )
                 st.write("---")
         else:
-            st.warning("No results found for channels with fewer than 3,000 subscribers and duration over 20 minutes.")
+            st.warning(f"No results found for channels with fewer than 3,000 subscribers and duration over {min_duration} minutes.")
 
     except Exception as e:
         st.error(f"An error occurred: {e}")
